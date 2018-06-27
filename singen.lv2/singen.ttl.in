@@ -23,9 +23,9 @@
 		lv2:index 1 ;
 		lv2:symbol "amp" ;
 		lv2:name "Amplitude" ;
-		lv2:default 1 ;
-		lv2:minimum 0.0 ;
-		lv2:maximum 20.0 ;
+		lv2:default -18.0 ;
+		lv2:minimum -80.0 ;
+		lv2:maximum 0.0 ;
 		units:unit units:db ;
 	] , [
 		a lv2:AudioPort , lv2:OutputPort ;

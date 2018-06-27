@@ -23,6 +23,14 @@ typedef struct {
     float phase;
 } SinGen;
 
+static float
+db_to_coeff (float db)
+{
+	if (db <= -80) { return 0; }
+	else if (db >=  20) { return 10; }
+	return powf (10.f, .05f * db);
+}
+
 static void activate(LV2_Handle instance) {}
 static void deactivate(LV2_Handle instance) {}
 static const void* extension_data(const char *uri) { return NULL; }
@@ -77,7 +85,7 @@ run(LV2_Handle instance, uint32_t n_samples)
 
 	for (uint32_t i = 0; i < n_samples; ++i)
 	{
-		output[i] = amp * sinf(2.0f * M_PI * phase);
+		output[i] = db_to_coeff(amp) * sinf(2.0f * M_PI * phase);
 		phase += inc;
 	}
 	singen->phase = fmodf(phase, 1.0);
