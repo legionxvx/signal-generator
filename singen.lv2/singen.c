@@ -10,17 +10,17 @@
 #endif
 
 typedef enum {
-    SINGEN_FREQ,
-    SINGEN_AMP,
-    SINGEN_OUT,
+	SINGEN_FREQ,
+	SINGEN_AMP,
+	SINGEN_OUT,
 } PortIndex;
 
 typedef struct {
 	float* freq;
 	float* amp;
-	float  srate;
-    float* output;
-    float phase;
+	float srate;
+	float* output;
+	float phase;
 } SinGen;
 
 static float
@@ -63,9 +63,9 @@ extension_data(const char *uri) {
 
 static LV2_Handle
 instantiate (const LV2_Descriptor*     descriptor,
-             double                    rate,
-             const char*               bundle_path,
-             const LV2_Feature* const* features)
+			 double                    rate,
+			 const char*               bundle_path,
+			 const LV2_Feature* const* features)
 {
 	SinGen* singen = (SinGen*)calloc(1, sizeof(SinGen));
 	singen->srate = rate;
@@ -76,8 +76,8 @@ static void cleanup(LV2_Handle instance) { free(instance); }
 
 static void
 connect_port(LV2_Handle instance,
-             uint32_t   port,
-             void*      data)
+			 uint32_t   port,
+			 void*      data)
 {
 	SinGen* singen = (SinGen*)instance;
 
