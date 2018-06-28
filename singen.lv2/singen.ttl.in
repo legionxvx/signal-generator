@@ -18,6 +18,7 @@
 		lv2:minimum 20.0 ;
 		lv2:maximum 20000.0 ;
 		units:unit units:hz ;
+		lv2:portProperty <http://lv2plug.in/ns/ext/port-props#logarithmic> ;
 	] , [
 		a lv2:InputPort , lv2:ControlPort ;
 		lv2:index 1 ;

@@ -31,9 +31,35 @@ db_to_coeff (float db)
 	return powf (10.f, .05f * db);
 }
 
-static void activate(LV2_Handle instance) {}
-static void deactivate(LV2_Handle instance) {}
-static const void* extension_data(const char *uri) { return NULL; }
+static float 
+lowpass_filter_param(SinGen* self, 
+					 float old_val, 
+					 float new_val, 
+					 float limit)
+{
+	float lpf = 2048 / self->srate;
+	if ( fabs(old_val - new_val) < limit ) {
+		return new_val;
+	} else {
+		return old_val + lpf * (new_val - old_val);
+	}
+}
+
+//just need these so the compiler doesn't complain
+static void 
+activate(LV2_Handle instance) {
+
+}
+
+static void 
+deactivate(LV2_Handle instance) {
+	
+}
+
+static const void* 
+extension_data(const char *uri) { 
+	return NULL; 
+}
 
 static LV2_Handle
 instantiate (const LV2_Descriptor*     descriptor,
@@ -69,14 +95,16 @@ connect_port(LV2_Handle instance,
 	}
 }
 
+float old_freq = 0;
+float old_amp = 0;
 static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
 	SinGen* singen = (SinGen*)instance;
 
-	float amp = *(singen->amp);
+	float amp = lowpass_filter_param(singen, old_amp, *(singen->amp), 0.02);
 	float phase = singen->phase;
-	float freq = *(singen->freq);
+	float freq = lowpass_filter_param(singen, old_freq, *(singen->freq), 0.02);
 	double srate = singen->srate;
 
 	float* output = singen->output;
@@ -89,6 +117,8 @@ run(LV2_Handle instance, uint32_t n_samples)
 		phase += inc;
 	}
 	singen->phase = fmodf(phase, 1.0);
+	old_freq = freq;
+	old_amp = amp;
 }
 
 static const LV2_Descriptor descriptor = {
@@ -107,7 +137,9 @@ const LV2_Descriptor*
 lv2_descriptor(uint32_t index)
 {
 	switch (index) {
-	case 0:  return &descriptor;
-	default: return NULL;
+		case 0:  
+			return &descriptor;
+		default: 
+			return NULL;
 	}
 }
