@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdbool.h>
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+
+#ifdef LV2_EXTENDED
+#include <cairo/cairo.h>
+#include "ardour/lv2_extensions.h"
+#endif
+
 #define SIN_URI "urn:ardour:singen"
 
 #ifndef M_PI
@@ -21,6 +27,13 @@ typedef struct {
 	float srate;
 	float* output;
 	float phase;
+#ifdef LV2_EXTENDED
+	LV2_Inline_Display_Image_Surface surf;
+	bool                     need_expose;
+	cairo_surface_t*         display;
+	LV2_Inline_Display*      queue_draw;
+	uint32_t                 w, h;
+#endif
 } SinGen;
 
 static float
@@ -32,12 +45,12 @@ db_to_coeff (float db)
 }
 
 static float 
-lowpass_filter_param(SinGen* self, 
+lowpass_filter_param(SinGen* singen, 
 					 float old_val, 
 					 float new_val, 
 					 float limit)
 {
-	float lpf = 2048 / self->srate;
+	float lpf = 2048 / singen->srate;
 	if ( fabs(old_val - new_val) < limit ) {
 		return new_val;
 	} else {
@@ -56,11 +69,6 @@ deactivate(LV2_Handle instance) {
 	
 }
 
-static const void* 
-extension_data(const char *uri) { 
-	return NULL; 
-}
-
 static LV2_Handle
 instantiate (const LV2_Descriptor*     descriptor,
 			 double                    rate,
@@ -69,6 +77,14 @@ instantiate (const LV2_Descriptor*     descriptor,
 {
 	SinGen* singen = (SinGen*)calloc(1, sizeof(SinGen));
 	singen->srate = rate;
+	
+	for (int i=0; features[i]; ++i) {
+#ifdef LV2_EXTENDED
+		if (!strcmp(features[i]->URI, LV2_INLINEDISPLAY__queue_draw)) {
+			singen->queue_draw = (LV2_Inline_Display*) features[i]->data;
+		}
+#endif
+	}
 	return (LV2_Handle)singen;
 }
 
@@ -119,7 +135,74 @@ run(LV2_Handle instance, uint32_t n_samples)
 	singen->phase = fmodf(phase, 1.0);
 	old_freq = freq;
 	old_amp = amp;
+	singen->queue_draw->queue_draw (singen->queue_draw->handle);
 }
+
+#ifdef LV2_EXTENDED
+
+#include "dynamic_display.c"
+
+static LV2_Inline_Display_Image_Surface *
+render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
+{
+	SinGen* singen = (SinGen*)instance;
+
+	singen->h = 30;
+
+	float amp = *singen->amp;
+	float phase = singen->phase;
+	float freq = lowpass_filter_param(singen, old_freq, *(singen->freq), 0.02);
+	double srate = singen->srate;
+
+	float inc = freq / srate;
+
+	float h = singen->h;
+
+
+	cairo_t* cr = cairo_create(singen->display);
+	singen->display = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, w, max_h);
+
+	cairo_rectangle (cr, 0, 0, w, singen->h);
+	cairo_set_source_rgba (cr, .8, .8, .8, 1.0);
+	cairo_fill(cr);
+	cairo_set_line_width(cr, 1.5);
+	cairo_set_source_rgba(cr, 0.8, 0.8, 0.8, 1.0);
+
+	float l_x, l_y = 0;
+	for (uint32_t x = 0; x < w; x++) {
+		float y = db_to_coeff(amp) * sinf(2.0f * M_PI * phase);
+		float yc = 0.5 * h + ((-0.5 * h) * y);
+		cairo_move_to (cr, x, yc + 3);
+		cairo_line_to (cr, l_x, l_y + 3);
+		l_x = x;
+		l_y = yc;
+		cairo_stroke(cr);
+		cairo_close_path (cr);
+		phase += inc;
+	}
+	singen->phase = fmodf(phase, 1.0);
+
+	singen->surf.width = cairo_image_surface_get_width (singen->display);
+	singen->surf.height = cairo_image_surface_get_height (singen->display);
+	singen->surf.stride = cairo_image_surface_get_stride (singen->display);
+	singen->surf.data = cairo_image_surface_get_data  (singen->display);
+
+	return &singen->surf;
+}
+#endif
+
+static const void*
+extension_data(const char* uri)
+{
+#ifdef LV2_EXTENDED
+	static const LV2_Inline_Display_Interface display  = { render_inline };
+	if (!strcmp(uri, LV2_INLINEDISPLAY__interface)) {
+		return &display;
+	}
+#endif
+	return NULL;
+}
+
 
 static const LV2_Descriptor descriptor = {
 	SIN_URI,
