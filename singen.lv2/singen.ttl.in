@@ -6,7 +6,7 @@
 
 <urn:ardour:singen>
     a lv2:Plugin ;
-	doap:name "a-SinGen" ;
+	doap:name "SinGen" ;
 	doap:license <http://opensource.org/licenses/isc> ;
 	lv2:optionalFeature lv2:hardRTCapable ;
 	lv2:port [

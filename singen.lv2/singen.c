@@ -149,38 +149,36 @@ render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
 
 	singen->h = 30;
 
-	float amp = *singen->amp;
-	float phase = singen->phase;
-	float freq = lowpass_filter_param(singen, old_freq, *(singen->freq), 0.02);
+	float amp = *(singen->amp);
+	float phase = 0;
+	float freq = *(singen->freq);
 	double srate = singen->srate;
 
 	float inc = freq / srate;
 
 	float h = singen->h;
 
-
+	singen->display = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, w, h);
 	cairo_t* cr = cairo_create(singen->display);
-	singen->display = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, w, max_h);
 
 	cairo_rectangle (cr, 0, 0, w, singen->h);
-	cairo_set_source_rgba (cr, .8, .8, .8, 1.0);
+	cairo_set_source_rgba (cr, 0, 0, 0, 1.0);
 	cairo_fill(cr);
 	cairo_set_line_width(cr, 1.5);
 	cairo_set_source_rgba(cr, 0.8, 0.8, 0.8, 1.0);
 
 	float l_x, l_y = 0;
 	for (uint32_t x = 0; x < w; x++) {
-		float y = db_to_coeff(amp) * sinf(2.0f * M_PI * phase);
+		float y = db_to_coeff(amp/2) * sinf(2.0f * M_PI * phase);
 		float yc = 0.5 * h + ((-0.5 * h) * y);
-		cairo_move_to (cr, x, yc + 3);
-		cairo_line_to (cr, l_x, l_y + 3);
+		cairo_move_to (cr, x, yc);
+		cairo_line_to (cr, l_x, l_y);
 		l_x = x;
 		l_y = yc;
+		phase += inc; 
 		cairo_stroke(cr);
-		cairo_close_path (cr);
-		phase += inc;
 	}
-	singen->phase = fmodf(phase, 1.0);
+	phase = fmodf(phase, 1.0);
 
 	singen->surf.width = cairo_image_surface_get_width (singen->display);
 	singen->surf.height = cairo_image_surface_get_height (singen->display);
