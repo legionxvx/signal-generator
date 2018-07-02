@@ -154,6 +154,9 @@ render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
 	float freq = *(singen->freq);
 	double srate = singen->srate;
 
+	if (freq < 500) {freq=500;}
+	if (freq > 6000) {freq=6000;}
+
 	float inc = freq / srate;
 
 	float h = singen->h;
