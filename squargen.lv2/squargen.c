@@ -120,15 +120,16 @@ run(LV2_Handle instance, uint32_t n_samples)
 {
 	SquarGen* squargen = (SquarGen*)instance;
 
-	float amp = lowpass_filter_param(squargen, old_amp, *(squargen->amp), 0.02);
+	float amp = lowpass_filter_param(squargen, old_amp, *(squargen->amp), 0.2);
 	float phase = squargen->phase;
-	float freq = lowpass_filter_param(squargen, old_freq, *(squargen->freq), 0.02);
+	float freq = lowpass_filter_param(squargen, old_freq, *(squargen->freq), 0.2);
 	double srate = squargen->srate;
 	float* output = squargen->output;
 
 	float inc = freq/srate;
 
 	int num_h = (int)(srate/(freq*2));
+	if(num_h > 1000) {num_h = 1000;}
 	double coeffs[num_h + 1];
 	coeffs[0] = 0;
 
