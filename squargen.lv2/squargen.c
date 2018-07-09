@@ -121,29 +121,39 @@ run(LV2_Handle instance, uint32_t n_samples)
 	SquarGen* squargen = (SquarGen*)instance;
 
 	float amp = lowpass_filter_param(squargen, old_amp, *(squargen->amp), 0.02);
+	float phase = squargen->phase;
 	float freq = lowpass_filter_param(squargen, old_freq, *(squargen->freq), 0.02);
 	double srate = squargen->srate;
 	float* output = squargen->output;
 
-	int num_harmonics = (srate/freq*2);
-	double coeffs[num_harmonics+1];
+	float inc = freq/srate;
+
+	int num_h = (int)(srate/(freq*2));
+	double coeffs[num_h + 1];
 	coeffs[0] = 0;
 
-	for (int x = 1; x < NUM(coeffs); x++) {
-		coeffs[x] = sinf(x * 0.5 * M_PI) * 2 / (x * M_PI);
+	for (uint32_t i = 1; i < NUM(coeffs); i++) {
+		coeffs[i] = sinf(i * 0.5 * M_PI) * 2 / (i * M_PI);
 	}
 
-	double scal =  (freq * M_PI * 2) / srate;
-
-	for (int i = 0; i < n_samples; ++i)
-	{
-		double t = scal * i;
+	for (uint32_t i = 0; i < n_samples; i++) {
+		double baseCos = cosf(phase * (2 * M_PI));
+		double baseSin = sinf(phase * (2 * M_PI));
+		double phasorCos = baseCos;
+		double phasorSin = baseSin;
 		double val = coeffs[0];
+
 		for (int j = 1; j < NUM(coeffs); j++) {
-			val += cosf(j*t) * coeffs[j];
+			val += coeffs[j] * phasorCos;
+			float t = phasorCos * baseCos - phasorSin * baseSin;
+			phasorSin = phasorSin * baseCos + phasorCos * baseSin;
+			phasorCos = t;
 		}
 		output[i] = db_to_coeff(amp) * val;
+
+		phase += inc;
 	}
+	squargen->phase = fmodf(phase, 1.0);
 
 	old_freq = freq;
 	old_amp = amp;
