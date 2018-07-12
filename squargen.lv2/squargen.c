@@ -31,58 +31,62 @@ typedef struct {
 	float phase;
 #ifdef LV2_EXTENDED
 	LV2_Inline_Display_Image_Surface surf;
-	bool                     need_expose;
-	cairo_surface_t*         display;
-	LV2_Inline_Display*      queue_draw;
-	uint32_t                 w, h;
+	bool                             need_expose;
+	cairo_surface_t*                 display;
+	LV2_Inline_Display*              queue_draw;
+	uint32_t                         w, h;
 #endif
 } SquarGen;
 
 static float
-db_to_coeff (float db)
+db_to_coeff(float db)
 {
-	if (db <= -80) { return 0; }
-	else if (db >=  20) { return 10; }
-	return powf (10.f, .05f * db);
+	if(db <= -80)      { return 0;  }
+	else if(db >=  20) { return 10; }
+
+	return powf(10.f, .05f * db);
 }
 
-static float 
-lowpass_filter_param(SquarGen* squargen, 
-					 float old_val, 
-					 float new_val, 
-					 float limit)
+static float
+lowpass_filter_param(SquarGen* squargen,
+					 float     old_val,
+					 float     new_val,
+					 float     limit)
 {
 	float lpf = 2048 / squargen->srate;
-	if ( fabs(old_val - new_val) < limit ) {
+
+	if( fabs(old_val - new_val) < limit ) {
 		return new_val;
 	} else {
 		return old_val + lpf * (new_val - old_val);
 	}
+
 }
 
 //just need these so the compiler doesn't complain
-static void 
+static void
 activate(LV2_Handle instance) {
 
 }
 
-static void 
+static void
 deactivate(LV2_Handle instance) {
-	
+
 }
 
 static LV2_Handle
-instantiate (const LV2_Descriptor*     descriptor,
-			 double                    rate,
-			 const char*               bundle_path,
-			 const LV2_Feature* const* features)
+instantiate(const LV2_Descriptor*     descriptor,
+			double                    rate,
+			const char*               bundle_path,
+			const LV2_Feature* const* features)
 {
 	SquarGen* squargen = (SquarGen*)calloc(1, sizeof(SquarGen));
+
 	squargen->srate = rate;
-	
-	for (int i=0; features[i]; ++i) {
+
+	for(int i=0; features[i]; ++i) {
 #ifdef LV2_EXTENDED
-		if (!strcmp(features[i]->URI, LV2_INLINEDISPLAY__queue_draw)) {
+		if(!strcmp(features[i]->URI, LV2_INLINEDISPLAY__queue_draw)) {
 			squargen->queue_draw = (LV2_Inline_Display*) features[i]->data;
 		}
 #endif
@@ -90,7 +94,9 @@ instantiate (const LV2_Descriptor*     descriptor,
 	return (LV2_Handle)squargen;
 }
 
-static void cleanup(LV2_Handle instance) { free(instance); }
+static void cleanup(LV2_Handle instance) {
+	free(instance);
+}
 
 static void
 connect_port(LV2_Handle instance,
@@ -115,6 +121,7 @@ connect_port(LV2_Handle instance,
 
 float old_freq = 0;
 float old_amp = 0;
+
 static void
 run(LV2_Handle instance, uint32_t n_samples)
 {
@@ -129,7 +136,7 @@ run(LV2_Handle instance, uint32_t n_samples)
 	float inc = freq/srate;
 
 	int num_h = (int)(srate/(freq*2));
-	if(num_h > 1000) {num_h = 1000;}
+	if(num_h > 800) {num_h = 800;} // limit to 800 harmonics
 	double coeffs[num_h + 1];
 	coeffs[0] = 0;
 
@@ -158,7 +165,7 @@ run(LV2_Handle instance, uint32_t n_samples)
 
 	old_freq = freq;
 	old_amp = amp;
-	//squargen->queue_draw->queue_draw(squargen->queue_draw->handle);
+	squargen->queue_draw->queue_draw(squargen->queue_draw->handle);
 }
 
 #ifdef LV2_EXTENDED
@@ -177,7 +184,7 @@ render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
 	float freq = *(squargen->freq);
 	double srate = squargen->srate;
 
-	if (freq < 500) {freq=500;}
+	if (freq < 750) {freq=750;}
 	if (freq > 6000) {freq=6000;}
 
 	float inc = freq / srate;
@@ -194,16 +201,21 @@ render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
 	cairo_set_source_rgba(cr, 0.8, 0.8, 0.8, 1.0);
 
 	float l_x, l_y = 0;
-	/*for (uint32_t x = 0; x < w; x++) {
-		float y = db_to_coeff(amp/2) * sinf(2.0f * M_PI * phase);
+	for (uint32_t x = 0; x < w; x++) {
+		float y = db_to_coeff(amp) * sinf(2.0f * M_PI * phase);
+		if (y > 0) {
+			y = 0.950;
+		} else {
+			y = -0.900;
+		}
 		float yc = 0.5 * h + ((-0.5 * h) * y);
 		cairo_move_to (cr, x, yc);
 		cairo_line_to (cr, l_x, l_y);
 		l_x = x;
 		l_y = yc;
-		phase += inc; 
+		phase += inc;
 		cairo_stroke(cr);
-	}*/
+	}
 	phase = fmodf(phase, 1.0);
 
 	squargen->surf.width = cairo_image_surface_get_width (squargen->display);
@@ -216,11 +228,10 @@ render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
 #endif
 
 static const void*
-extension_data(const char* uri)
-{
+extension_data(const char* uri) {
 #ifdef LV2_EXTENDED
-	static const LV2_Inline_Display_Interface display  = { render_inline };
-	if (!strcmp(uri, LV2_INLINEDISPLAY__interface)) {
+	static const LV2_Inline_Display_Interface display = { render_inline };
+	if(!strcmp(uri, LV2_INLINEDISPLAY__interface)) {
 		return &display;
 	}
 #endif
@@ -244,9 +255,9 @@ const LV2_Descriptor*
 lv2_descriptor(uint32_t index)
 {
 	switch (index) {
-		case 0:  
+		case 0:
 			return &descriptor;
-		default: 
+		default:
 			return NULL;
 	}
 }
