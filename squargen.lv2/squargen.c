@@ -105,7 +105,7 @@ connect_port(LV2_Handle instance,
 {
 	SquarGen* squargen = (SquarGen*)instance;
 
-	switch ((PortIndex)port) {
+	switch((PortIndex)port) {
 		case SQUARGEN_FREQ:
 			squargen->freq = (float*)data;
 			break;
@@ -140,18 +140,18 @@ run(LV2_Handle instance, uint32_t n_samples)
 	double coeffs[num_h + 1];
 	coeffs[0] = 0;
 
-	for (uint32_t i = 1; i < NUM(coeffs); i++) {
+	for(uint32_t i = 1; i < NUM(coeffs); i++) {
 		coeffs[i] = sinf(i * 0.5 * M_PI) * 2 / (i * M_PI);
 	}
 
-	for (uint32_t i = 0; i < n_samples; i++) {
+	for(uint32_t i = 0; i < n_samples; i++) {
 		double baseCos = cosf(phase * (2 * M_PI));
 		double baseSin = sinf(phase * (2 * M_PI));
 		double phasorCos = baseCos;
 		double phasorSin = baseSin;
 		double val = coeffs[0];
 
-		for (int j = 1; j < NUM(coeffs); j++) {
+		for(int j = 1; j < NUM(coeffs); j++) {
 			val += coeffs[j] * phasorCos;
 			float t = phasorCos * baseCos - phasorSin * baseSin;
 			phasorSin = phasorSin * baseCos + phasorCos * baseSin;
@@ -173,7 +173,7 @@ run(LV2_Handle instance, uint32_t n_samples)
 #include "dynamic_display.c"
 
 static LV2_Inline_Display_Image_Surface *
-render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
+render_inline(LV2_Handle instance, uint32_t w, uint32_t max_h)
 {
 	SquarGen* squargen = (SquarGen*)instance;
 
@@ -201,7 +201,7 @@ render_inline (LV2_Handle instance, uint32_t w, uint32_t max_h)
 	cairo_set_source_rgba(cr, 0.8, 0.8, 0.8, 1.0);
 
 	float l_x, l_y = 0;
-	for (uint32_t x = 0; x < w; x++) {
+	for(uint32_t x = 0; x < w; x++) {
 		float y = db_to_coeff(amp) * sinf(2.0f * M_PI * phase);
 		if (y > 0) {
 			y = 0.950;
@@ -254,7 +254,7 @@ LV2_SYMBOL_EXPORT
 const LV2_Descriptor*
 lv2_descriptor(uint32_t index)
 {
-	switch (index) {
+	switch(index) {
 		case 0:
 			return &descriptor;
 		default:
